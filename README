@@ -1,0 +1,58 @@
+Tested and compiled on Ubuntu 12.04
+
+Required libraries: libpcap, libcurl-dev, pthread
+
+
+to compile:
+
+gcc -o catimageinfo catimageinfo.c -lpcap -lcurl -pthread
+gcc -o postimage postimage.c -lcurl
+gcc -o echo_server echo_server.c
+
+
+OR
+
+make 
+
+:)
+
+
+to run:
+*********** MONITOR *******************
+This tool provides a constant running monitor of all images downloaded to your computer (in a tcpdump'ish method)
+*note not responsible for usage of catimageinfo and users acknowledge that this will report information gleaned from images downloaded to server and port of choice if used... use responsibly. This tool just like postimage below uses Google Search by Image to faciliate the image dereference.
+
+(as root) ./catimageinfo [eth0] [-s <echo server ip> <echo server port>]
+
+
+
+*********** POSTIMAGE ACCESSOR **********
+This tool is a direct usage of post image, it will upload desired image to Google and report the desired level of verbosity for the image.   
+
+./postimage <imagepath> <desired info> [<echo server ip> <echo server port>]
+Desired Info - Description
+0            - only report positive results
+1            - report positive results OR simliar links
+2            - report positive results AND similar links
+
+
+
+*********** IMAGE BINNING UTILITY *****
+This tool renames all images within a directory. For instance if you wish to rename a directory of 10000 images in a single directory to content appropriate meanings run this tool. For example ~/Pictures/IMG_XXXX.jpg -> ~/newpicutres/epcot.jpg
+
+**note this tool also reports home to the echo_server tool
+
+./rename_directory.sh <directory of destination images> <directory of source images> <echo server ip> <echo server port>
+*note, cwd IS important, dont change
+
+
+
+*********** Frequency analysis ********
+This is just a small tool to group and sort the content provided in a different way, may or may not be useful .. we'll see later :)
+./identify_popular_terms.sh <results.txt>
+*note, cwd IS important, dont change
+
+
+
+
+
