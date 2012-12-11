@@ -18,8 +18,8 @@ make
 
 
 to run:
-*********** MONITOR *******************
-This tool provides a constant running monitor of all images downloaded to your computer (in a tcpdump'ish method)
+*********** VIEWER *******************
+This tool provides a constant running view of all images downloaded to your computer (in a tcpdump'ish method)
 *note not responsible for usage of catimageinfo and users acknowledge that this will report information gleaned from images downloaded to server and port of choice if used... use responsibly. This tool just like postimage below uses Google Search by Image to faciliate the image dereference.
 
 (as root) ./catimageinfo [eth0] [-s <echo server ip> <echo server port>]
