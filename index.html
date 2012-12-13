@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Catimageinfo : A tool to gather information about images stored or gathered on a computer, and a reporting system for that" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Catimageinfo</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/quiteconfused/CatImageInfo">View on GitHub</a>
+
+          <h1 id="project_title">Catimageinfo</h1>
+          <h2 id="project_tagline">A tool to gather information about images stored or gathered on a computer, and a reporting system for that</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/quiteconfused/CatImageInfo/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/quiteconfused/CatImageInfo/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>CatImageInfo</h1>
+
+<hr><blockquote>
+<p>This project contains test tools that gather information on image content (not strings or meta information) and use that information in a dynamic or applied fashion.
+The initial release of the program uses Google Search by Image capability in order to gauge the image content.</p>
+
+<p>Some example tools developed are a direct Google Search by Image accessor program from the command line (postimage), a dynamic image dereferencing or "viewer" program and namesake (catimageinfo), and finally a program to dynamically rename all image in a directory based on their content (rename_directory.sh).</p>
+
+<h2>Compiling</h2>
+
+<p><code>gcc -o catimageinfo catimageinfo.c -lpcap -lcurl -pthread</code></p>
+
+<p><code>gcc -o postimage postimage.c -lcurl</code></p>
+
+<p><code>gcc -o echo_server echo_server.c</code></p>
+
+<p>OR</p>
+
+<p><code>make</code></p>
+
+<p>:)</p>
+
+<p><em>Tested and compiled on Ubuntu 12.04</em>
+<em>Required libraries: libpcap, libcurl-dev, pthread</em></p>
+
+<h2>Running:</h2>
+
+<h3>VIEWER</h3>
+
+<p>This tool provides a constant running view of all images downloaded to your computer (in a tcpdump'ish method)</p>
+
+<p><em>note not responsible for usage of catimageinfo and users acknowledge that this will report information gleaned from images downloaded to server and port of choice if used... use responsibly. This tool just like postimage below uses Google Search by Image to facilitate the image dereference.</em></p>
+
+<p>(as root) <code>./catimageinfo [eth0] [-s &lt;echo_server_ip&gt; &lt;echo_server_port&gt;]</code></p>
+
+<h3>POSTIMAGE ACCESSOR</h3>
+
+<p>This tool is a direct usage of post image, it will upload desired image to Google and report the desired level of verbosity for the image.   </p>
+
+<p><code>./postimage &lt;imagepath&gt; &lt;desired info&gt; [&lt;echo_server_ip&gt; &lt;echo_server_port&gt;]</code></p>
+
+<p><em>Desired Info - Description</em></p>
+
+<p><em>0            - only report positive results</em></p>
+
+<p><em>1            - report positive results OR simliar links</em></p>
+
+<p><em>2            - report positive results AND similar links</em></p>
+
+<h3>IMAGE BINNING UTILITY</h3>
+
+<p>This tool renames all images within a directory. For instance if you wish to rename a directory of 10000 images in a single directory to content appropriate meanings run this tool. For example ~/Pictures/IMG_XXXX.jpg -&gt; ~/newpicutres/epcot.jpg</p>
+
+<p><code>./rename_directory.sh &lt;directory_of_destination_images&gt; &lt;directory_of_source_images&gt; &lt;echo_server_ip&gt; &lt;echo_server_port&gt;</code></p>
+
+<p><em>note, cwd IS important, dont change</em></p>
+
+<p><em>note this tool also reports home to the echo_server tool</em></p>
+
+<h3>FREQUENCY ANALYSIS</h3>
+
+<p>This is just a small tool to group and sort the content provided in a different way, may or may not be useful .. we'll see later :)</p>
+
+<p><code>./identify_popular_terms.sh &lt;results.txt&gt;</code></p>
+
+<p><em>note, cwd IS important, don’t change</em></p>
+</blockquote>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Catimageinfo maintained by <a href="https://github.com/quiteconfused">quiteconfused</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
