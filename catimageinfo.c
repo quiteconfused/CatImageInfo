@@ -132,6 +132,8 @@ struct entry {
    TAILQ_ENTRY(entry) entries;         /* Tail queue. */
 };
 
+void print_buffer(const unsigned char* buffer, unsigned int size);
+
 unsigned int send_results_to_server(char* hostname, char* port, char* results){
     int sockfd, portno, n;
     struct sockaddr_in serv_addr;
@@ -270,16 +272,20 @@ void* entry_point(void* arg){
 		previous_buffer_offset = complete_html;	
 		for(buf = strtok_r(complete_html, DELIM, &tempptr); buf!=NULL && notcomplete; buf = strtok_r(NULL, DELIM, &tempptr)){
 			if(!memcmp(buf, "Visually similar", sizeof("Visually similar")-1)){
-				visually_similar_offset = complete_html_copy + (buf - complete_html_copy);
-				while(memcmp(visually_similar_offset, "q=", 2) && visually_similar_offset>previous_buffer_offset)
+				visually_similar_offset = complete_html_copy + (buf - complete_html);
+				while(memcmp(visually_similar_offset, "q=", 2) && visually_similar_offset-complete_html_copy>previous_buffer_offset-complete_html)
 					visually_similar_offset--;
-				if(previous_buffer_offset!=visually_similar_offset){
-					unsigned char completed_string[2000]={0};
+				//print_buffer(complete_html_copy, recieved_size);
+				//printf("%s\n", complete_html_copy); fflush(stdout);
+				if(previous_buffer_offset-complete_html!=visually_similar_offset-complete_html_copy){
+					unsigned int completed_string_max_size = recieved_size-(visually_similar_offset-complete_html_copy+2);
+					unsigned char *completed_string = malloc(completed_string_max_size+1);
 					unsigned char *copy_completed_string=completed_string;
+					memset(completed_string, 0, completed_string_max_size+1);
 					visually_similar_offset+=2;
 					while(	memcmp(visually_similar_offset, "&amp", 4) && 
-						copy_completed_string - completed_string < 2000 && 
-						visually_similar_offset < buf+strlen(buf)){
+						copy_completed_string - completed_string < completed_string_max_size && 
+						visually_similar_offset-complete_html_copy < previous_buffer_offset-complete_html+recieved_size){
 						if(visually_similar_offset[0]=='+'){
 							sprintf(copy_completed_string, "%c", ' ');
 							copy_completed_string++;
@@ -299,6 +305,7 @@ void* entry_point(void* arg){
     					send_results_to_server(servername, portstring, completed_string);
     				}
 					notcomplete=0;
+					free(completed_string);
 				}
 				else {
 					printf("[MISSED] %s\n", filename);
