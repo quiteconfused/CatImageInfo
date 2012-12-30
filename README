@@ -1,14 +1,16 @@
-Tested and compiled on Ubuntu 12.04
+CatImageInfo
+************
+This project contains test tools that gather information on image content (not strings or meta information) and use that information in a dynamic or appied fashion.
+The initial release of the program uses Google Search by Image capability in order to gauge the image content.
+Some example tools developed are a direct Google Search by Image accessor program from the command line (postimage), a dynamic image dereferencing or "viewer" program and namesake (catimageinfo), and finally a program to dynamically rename all image in a directory based on their content (rename_directory.sh).
 
-Required libraries: libpcap, libcurl-dev, pthread
 
-
-to compile:
+Compiling
+*********
 
 gcc -o catimageinfo catimageinfo.c -lpcap -lcurl -pthread
 gcc -o postimage postimage.c -lcurl
 gcc -o echo_server echo_server.c
-
 
 OR
 
@@ -17,9 +19,14 @@ make
 :)
 
 
+**Tested and compiled on Ubuntu 12.04
+
+**Required libraries: libpcap, libcurl-dev, pthread
+
+
 to run:
-*********** MONITOR *******************
-This tool provides a constant running monitor of all images downloaded to your computer (in a tcpdump'ish method)
+*********** VIEWER *******************
+This tool provides a constant running view of all images downloaded to your computer (in a tcpdump'ish method)
 *note not responsible for usage of catimageinfo and users acknowledge that this will report information gleaned from images downloaded to server and port of choice if used... use responsibly. This tool just like postimage below uses Google Search by Image to faciliate the image dereference.
 
 (as root) ./catimageinfo [eth0] [-s <echo server ip> <echo server port>]
