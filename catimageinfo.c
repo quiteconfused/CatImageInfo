@@ -67,6 +67,10 @@
 
 #define TH_OFF(th)      (((th)->th_offx2 & 0xf0) >> 4)
 
+#define HTTP_HEADER "HTTP/1.1 200 OK"
+#define GET_HEADER "GET "
+#define VISUALLY_SIMILAR "Visually similar"
+
 pcap_t *handle;				/* packet capture handle */
 unsigned char* servername = NULL;
 unsigned char* portstring = NULL;
@@ -271,12 +275,10 @@ void* entry_point(void* arg){
 		int notcomplete=1;
 		previous_buffer_offset = complete_html;	
 		for(buf = strtok_r(complete_html, DELIM, &tempptr); buf!=NULL && notcomplete; buf = strtok_r(NULL, DELIM, &tempptr)){
-			if(!memcmp(buf, "Visually similar", sizeof("Visually similar")-1)){
+			if(!memcmp(buf, VISUALLY_SIMILAR, sizeof(VISUALLY_SIMILAR)-1)){
 				visually_similar_offset = complete_html_copy + (buf - complete_html);
 				while(memcmp(visually_similar_offset, "q=", 2) && visually_similar_offset-complete_html_copy>previous_buffer_offset-complete_html)
 					visually_similar_offset--;
-				//print_buffer(complete_html_copy, recieved_size);
-				//printf("%s\n", complete_html_copy); fflush(stdout);
 				if(previous_buffer_offset-complete_html!=visually_similar_offset-complete_html_copy){
 					unsigned int completed_string_max_size = recieved_size-(visually_similar_offset-complete_html_copy+2);
 					unsigned char *completed_string = malloc(completed_string_max_size+1);
@@ -463,7 +465,8 @@ unsigned int process_packet(struct tcp_session* stream){
 	for(packets = stream->dhead.tqh_first; packets !=NULL; packets = packets->entries.tqe_next){
 		incoming_size+=packets->size;	
 	}
-	incoming_buffer = malloc(incoming_size);
+	incoming_buffer = malloc(incoming_size+1);
+	memset(incoming_buffer, 0, incoming_size+1);
 	while(stream->dhead.tqh_first != NULL){
 		struct packets *lowest = stream->dhead.tqh_first;
 		for(packets = stream->dhead.tqh_first; packets !=NULL; packets = packets->entries.tqe_next){
@@ -484,7 +487,8 @@ unsigned int process_packet(struct tcp_session* stream){
 	for(packets = stream->shead.tqh_first; packets !=NULL; packets = packets->entries.tqe_next){
 		outgoing_size+=packets->size;	
 	}
-	outgoing_buffer = malloc(outgoing_size);
+	outgoing_buffer = malloc(outgoing_size+1);
+	memset(outgoing_buffer, 0, outgoing_size+1);
 	while(stream->shead.tqh_first != NULL){
 		struct packets *lowest = stream->shead.tqh_first;
 		for(packets = stream->shead.tqh_first; packets !=NULL; packets = packets->entries.tqe_next){
@@ -500,8 +504,11 @@ unsigned int process_packet(struct tcp_session* stream){
 		free(lowest);
 	}
 		
-	outgoing_buffer_copy = malloc(outgoing_size);
-	incoming_buffer_copy = malloc(incoming_size);
+	outgoing_buffer_copy = malloc(outgoing_size+1);
+	incoming_buffer_copy = malloc(incoming_size+1);
+	
+	memset(outgoing_buffer_copy, 0, outgoing_size+1);
+	memset(incoming_buffer_copy, 0, incoming_size+1);
 	
 	memcpy(outgoing_buffer_copy, outgoing_buffer, outgoing_size);
 	memcpy(incoming_buffer_copy, incoming_buffer, incoming_size);
@@ -510,20 +517,20 @@ unsigned int process_packet(struct tcp_session* stream){
 	incoming_temp = 0;
 
 	do{
-		if(!strncmp(outgoing_buffer_copy+outgoing_temp, "GET ", 4)){
-			unsigned int pathname_size = strchr(outgoing_buffer_copy+outgoing_temp+4, ' ') - (outgoing_buffer_copy+outgoing_temp+4) + 1;
+		if(!strncmp(outgoing_buffer_copy+outgoing_temp, GET_HEADER, sizeof(GET_HEADER)-1)){
+			unsigned int pathname_size = strchr(outgoing_buffer_copy+outgoing_temp+sizeof(GET_HEADER)-1, ' ') - (outgoing_buffer_copy+outgoing_temp+sizeof(GET_HEADER)-1) + 1;
 			char* temp_buffer2 = malloc(pathname_size);
 			char* pathname = NULL;
 			char* tmp2=NULL;
 			
 			memset(temp_buffer2, 0, pathname_size);
-			memcpy(temp_buffer2, outgoing_buffer_copy+outgoing_temp+4, pathname_size-1);
+			memcpy(temp_buffer2, outgoing_buffer_copy+outgoing_temp+sizeof(GET_HEADER)-1, pathname_size-1);
 			
-			for(pathname = strtok_r(temp_buffer2,path_termination, &tmp2); pathname; pathname = strtok_r(NULL, path_termination, &tmp2)){
-				if(strcasestr(pathname, ".jpg") || strcasestr(pathname, ".png") || strcasestr(pathname, ".gif")){
+			for(pathname = strtok_r(temp_buffer2,path_termination, &tmp2); pathname!=NULL; pathname = strtok_r(NULL, path_termination, &tmp2)){
+				if(strcasestr(pathname, ".jpeg") || strcasestr(pathname, ".jpg") || strcasestr(pathname, ".png") || strcasestr(pathname, ".gif")){
 					strcpy(filename, pathname);
 					
-					if(!strncmp(incoming_buffer_copy+incoming_temp, "HTTP/1.1 200 OK", 15) && strstr(incoming_buffer_copy+incoming_temp, string_termination)!=NULL){
+					if(!strncmp(incoming_buffer_copy+incoming_temp, HTTP_HEADER, sizeof(HTTP_HEADER)-1) && strstr(incoming_buffer_copy+incoming_temp, string_termination)!=NULL){
 						unsigned int header_size = strstr(incoming_buffer_copy+incoming_temp, string_termination) - (incoming_buffer_copy + incoming_temp)+strlen(string_termination);
 						unsigned int content_length = 0;
 						unsigned char* header = malloc(header_size+1);
@@ -545,10 +552,10 @@ unsigned int process_packet(struct tcp_session* stream){
 							return_val =1;			
 						}							
 									
-						if(strstr(incoming_buffer_copy+incoming_temp+header_size, "HTTP/1.1 200 OK")==NULL){
+						if(strstr(incoming_buffer_copy+incoming_temp+header_size, HTTP_HEADER)==NULL){
 							incoming_temp = incoming_size;
 						} else {
-							incoming_temp += strstr(incoming_buffer_copy+incoming_temp+header_size, "HTTP/1.1 200 OK") - (incoming_buffer_copy + incoming_temp);
+							incoming_temp += strstr(incoming_buffer_copy+incoming_temp+header_size, HTTP_HEADER) - (incoming_buffer_copy + incoming_temp);
 						}
 
 						free(header);
@@ -562,7 +569,7 @@ unsigned int process_packet(struct tcp_session* stream){
 		if(strstr(outgoing_buffer_copy+outgoing_temp, line_termination)==NULL)
 			outgoing_temp = outgoing_size;
 		else
-			outgoing_temp += strstr(outgoing_buffer_copy+outgoing_temp, line_termination) - (outgoing_buffer_copy+outgoing_temp) + strlen(line_termination);
+			outgoing_temp += strstr(outgoing_buffer_copy+outgoing_temp, line_termination) - (outgoing_buffer_copy+outgoing_temp) + sizeof(line_termination)-1;
 			
 	} while(outgoing_temp<outgoing_size && incoming_temp<incoming_size);
 	
