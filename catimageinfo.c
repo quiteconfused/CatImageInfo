@@ -450,7 +450,7 @@ unsigned int process_packet(struct tcp_session* stream){
 	unsigned int outgoing_temp = 0;
 	unsigned int incoming_temp = 0;
 	unsigned int return_val = 0;
-	const char path_termination[]="/";
+	const char path_termination[]="/\?=&";
 	const char string_termination[] = "\r\n\r\n";
 	const char line_termination[] = "\r\n";
 	const char content_type_string[] = "Content-Type: ";
@@ -530,14 +530,12 @@ unsigned int process_packet(struct tcp_session* stream){
 			memset(temp_buffer2, 0, pathname_size);
 			memcpy(temp_buffer2, http_line+sizeof(GET_HEADER)-1, pathname_size-1);
 			
-			printf("Found: %s\n", http_line);
-			
 			for(pathname = strtok_r(temp_buffer2,path_termination, &tmp2); pathname!=NULL; pathname = strtok_r(NULL, path_termination, &tmp2)){
 				if(strcasestr(pathname, ".jpeg") || strcasestr(pathname, ".jpg") || strcasestr(pathname, ".png") || strcasestr(pathname, ".gif")){
+					memset(filename, 0, MAX_PATH);
 					strcpy(filename, pathname);
-					
-					if(!memcmp(incoming_buffer_copy+incoming_temp, HTTP_HEADER, sizeof(HTTP_HEADER)-1) && 
-						strstr(incoming_buffer_copy+incoming_temp, string_termination)!=NULL){
+				
+					if(!memcmp(incoming_buffer_copy+incoming_temp, HTTP_HEADER, sizeof(HTTP_HEADER)-1)){
 						unsigned int header_size = strstr(incoming_buffer_copy+incoming_temp, string_termination) - (incoming_buffer_copy + incoming_temp)+strlen(string_termination);
 						unsigned int content_length = 0;
 						unsigned char* header = malloc(header_size+1);
@@ -558,12 +556,8 @@ unsigned int process_packet(struct tcp_session* stream){
 							prepare_image(filename, incoming_buffer_copy+incoming_temp+header_size, content_length);
 							return_val =1;			
 						}							
-									
-						if(strstr(incoming_buffer_copy+incoming_temp+header_size, HTTP_HEADER)==NULL){
-							incoming_temp = incoming_size;
-						} else {
-							incoming_temp += strstr(incoming_buffer_copy+incoming_temp+header_size, HTTP_HEADER) - (incoming_buffer_copy + incoming_temp);
-						}
+						
+						incoming_temp += header_size + content_length;
 
 						free(header);
 					}
