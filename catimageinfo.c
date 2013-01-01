@@ -146,13 +146,13 @@ unsigned int send_results_to_server(char* hostname, char* port, char* results){
 
     portno = atoi(port);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    if (sockfd < 0){
+    if(sockfd < 0){
         fprintf(stderr, "Error opening socket\n");
         return 1;
     }
 
     server = gethostbyname(hostname);
-    if (server == NULL) {
+    if(server == NULL) {
         fprintf(stderr,"ERROR, no such host\n");
         return 1;
     }
@@ -162,13 +162,13 @@ unsigned int send_results_to_server(char* hostname, char* port, char* results){
     bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
     serv_addr.sin_port = htons(portno);
 
-    if (connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
+    if(connect(sockfd,(struct sockaddr *) &serv_addr,sizeof(serv_addr)) < 0) {
     	fprintf(stderr, "error connecting\n");
     	return 1;
     }
 
     n = write(sockfd,results,strlen(results));
-    if (n < 0){
+    if(n < 0){
          fprintf(stderr, "Error writing to socket\n");
          return 1;
     }
@@ -205,15 +205,17 @@ void setup_request(CURL* curl, char *filename, void *head){
 	struct curl_httppost* post=NULL;
 	struct curl_httppost* last=NULL;
 
-	curl_easy_setopt (curl, CURLOPT_WRITEFUNCTION, writeCallback);
-	curl_easy_setopt (curl, CURLOPT_WRITEDATA, head);
+	curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1);
+
+	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeCallback);
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, head);
 	
 	curl_easy_setopt(curl, CURLOPT_URL, "http://www.google.com/searchbyimage/upload");
-	curl_easy_setopt (curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; rv:8.0) Gecko/20100101 Firefox/8.0");
-	curl_easy_setopt (curl, CURLOPT_HEADER, 0);
-	curl_easy_setopt (curl, CURLOPT_FOLLOWLOCATION, 1);
+	curl_easy_setopt(curl, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 6.1; rv:8.0) Gecko/20100101 Firefox/8.0");
+	curl_easy_setopt(curl, CURLOPT_HEADER, 0);
+	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1);
 	curl_easy_setopt( curl, CURLOPT_CONNECTTIMEOUT, 20 );
-	curl_easy_setopt (curl, CURLOPT_REFERER, "http://images.google.com/");
+	curl_easy_setopt(curl, CURLOPT_REFERER, "http://images.google.com/");
 
 	curl_formadd(&post, &last, CURLFORM_COPYNAME, "image_url", CURLFORM_COPYCONTENTS, "" , CURLFORM_END);
 	curl_formadd(&post, &last, CURLFORM_COPYNAME, "btnG", CURLFORM_COPYCONTENTS, "Search", CURLFORM_END);
@@ -439,6 +441,8 @@ unsigned int process_packet(struct tcp_session* stream){
 	char* incoming_buffer_copy=NULL;
 	char* outgoing_buffer_copy=NULL;
 	char* temp_buffer = NULL;
+	char* tok = NULL;
+	char* http_line = NULL;
 	char filename[MAX_PATH]={0};	
 	unsigned int outgoing_size = 0;
 	unsigned int incoming_size = 0;
@@ -516,21 +520,24 @@ unsigned int process_packet(struct tcp_session* stream){
 	outgoing_temp = 0;
 	incoming_temp = 0;
 
-	do{
-		if(!strncmp(outgoing_buffer_copy+outgoing_temp, GET_HEADER, sizeof(GET_HEADER)-1)){
-			unsigned int pathname_size = strchr(outgoing_buffer_copy+outgoing_temp+sizeof(GET_HEADER)-1, ' ') - (outgoing_buffer_copy+outgoing_temp+sizeof(GET_HEADER)-1) + 1;
+	for(http_line = strtok_r(outgoing_buffer_copy, line_termination, &tok); http_line!=NULL; http_line = strtok_r(NULL, line_termination, &tok)){
+		if(!memcmp(http_line, GET_HEADER, sizeof(GET_HEADER)-1)){
+			unsigned int pathname_size = strchr(http_line+sizeof(GET_HEADER)-1, ' ') - (http_line+sizeof(GET_HEADER)-1) + 1;
 			char* temp_buffer2 = malloc(pathname_size);
 			char* pathname = NULL;
 			char* tmp2=NULL;
 			
 			memset(temp_buffer2, 0, pathname_size);
-			memcpy(temp_buffer2, outgoing_buffer_copy+outgoing_temp+sizeof(GET_HEADER)-1, pathname_size-1);
+			memcpy(temp_buffer2, http_line+sizeof(GET_HEADER)-1, pathname_size-1);
+			
+			printf("Found: %s\n", http_line);
 			
 			for(pathname = strtok_r(temp_buffer2,path_termination, &tmp2); pathname!=NULL; pathname = strtok_r(NULL, path_termination, &tmp2)){
 				if(strcasestr(pathname, ".jpeg") || strcasestr(pathname, ".jpg") || strcasestr(pathname, ".png") || strcasestr(pathname, ".gif")){
 					strcpy(filename, pathname);
 					
-					if(!strncmp(incoming_buffer_copy+incoming_temp, HTTP_HEADER, sizeof(HTTP_HEADER)-1) && strstr(incoming_buffer_copy+incoming_temp, string_termination)!=NULL){
+					if(!memcmp(incoming_buffer_copy+incoming_temp, HTTP_HEADER, sizeof(HTTP_HEADER)-1) && 
+						strstr(incoming_buffer_copy+incoming_temp, string_termination)!=NULL){
 						unsigned int header_size = strstr(incoming_buffer_copy+incoming_temp, string_termination) - (incoming_buffer_copy + incoming_temp)+strlen(string_termination);
 						unsigned int content_length = 0;
 						unsigned char* header = malloc(header_size+1);
@@ -542,8 +549,8 @@ unsigned int process_packet(struct tcp_session* stream){
 
 						for(temp_header_str = strtok_r(header, line_termination, &tmp3); temp_header_str!=NULL; temp_header_str = strtok_r(NULL, line_termination, &tmp3)){
 					
-							if(!strncmp(temp_header_str, content_length_string, strlen(content_length_string))){
-								content_length=atoi(temp_header_str+strlen(content_length_string));
+							if(!memcmp(temp_header_str, content_length_string, sizeof(content_length_string)-1)){
+								content_length=atoi(temp_header_str+sizeof(content_length_string)-1);
 							}			
 						}
 						
@@ -565,15 +572,8 @@ unsigned int process_packet(struct tcp_session* stream){
 			
 			free(temp_buffer2);
 		}
-		
-		if(strstr(outgoing_buffer_copy+outgoing_temp, line_termination)==NULL)
-			outgoing_temp = outgoing_size;
-		else
-			outgoing_temp += strstr(outgoing_buffer_copy+outgoing_temp, line_termination) - (outgoing_buffer_copy+outgoing_temp) + sizeof(line_termination)-1;
-			
-	} while(outgoing_temp<outgoing_size && incoming_temp<incoming_size);
-	
-	
+	}
+
 	free(incoming_buffer_copy);
 	free(incoming_buffer);
 	free(outgoing_buffer_copy);
@@ -738,16 +738,16 @@ got_packet(u_char *arg, const struct pcap_pkthdr *header, const u_char *packet)
 		}
 	} 
 	
-	//if(!terminate){
-	//	struct tcp_session *temp_stream=NULL;
-	//	for (temp_stream = head->tqh_first; temp_stream != NULL; temp_stream = temp_stream->entries.tqe_next){
-	//		time_t current_time = time(NULL);
-	//		if(current_time-temp_stream->last_timestamp > 3){
-	//			//finish_packet(temp_stream, tcp, ip);
-	//			//TAILQ_REMOVE(head, temp_stream, entries);
-	//		} 
-	//	}
-	//}
+	if(!terminate){
+		struct tcp_session *temp_stream=NULL;
+		for (temp_stream = head->tqh_first; temp_stream != NULL; temp_stream = temp_stream->entries.tqe_next){
+			time_t current_time = time(NULL);
+			if(current_time-temp_stream->last_timestamp > 10){
+				finish_packet(temp_stream, tcp, ip);
+				TAILQ_REMOVE(head, temp_stream, entries);
+			} 
+		}
+	}
 
 	return;
 }
