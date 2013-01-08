@@ -7,6 +7,8 @@
 #include <arpa/inet.h>
 #include <netdb.h>
 
+#define VISUALLY_SIMILAR "Visually similar"
+
 struct entry {
    char* string;
    unsigned int item_size;
@@ -118,19 +120,15 @@ void get_info(char* filename, unsigned int option, void *head){
 }
 
 void entry_point(char* filename, unsigned int option, unsigned char* servername, unsigned char* port){
-    TAILQ_HEAD(, entry) head;
+	TAILQ_HEAD(, entry) head;
 	struct entry *np;
-	int best_guess_offset=-1;
 	unsigned int recieved_size = 0;
 	unsigned int current_loc = 0; 
 	char* complete_html = 0, *buf=0, *complete_html_copy=0, *visually_similar_offset=0, *previous_buffer_offset=0;   
 	unsigned int scanlinks=0;
 
-
 	TAILQ_INIT(&head);                      /* Initialize the queue. */
-
-    get_info(filename, option, &head);	
-	
+	get_info(filename, option, &head);	
 	for (np = head.tqh_first; np != NULL; np = np->entries.tqe_next)
 		recieved_size+=np->item_size;
 		
@@ -146,65 +144,24 @@ void entry_point(char* filename, unsigned int option, unsigned char* servername,
 			current_loc+=np->item_size;
 		}
 	}
-	if(option==0 || option==1){
-#if 0
-		int notcomplete=1;
-		previous_buffer_offset = complete_html;	
-		for(buf = strtok(complete_html, DELIM); buf!=NULL && notcomplete; buf = strtok(NULL, DELIM)){
-			if(!memcmp(buf, "Visually similar", sizeof("Visually similar")-1)){
-				visually_similar_offset = complete_html_copy + (buf - complete_html_copy);
-				while(memcmp(visually_similar_offset, "q=", 2) && visually_similar_offset>previous_buffer_offset)
-					visually_similar_offset--;
-				if(previous_buffer_offset!=visually_similar_offset){
-					visually_similar_offset+=2;
-					printf("%s: ", filename);
-					while(memcmp(visually_similar_offset, "&amp", 4)){
-						if(visually_similar_offset[0]=='+')
-							putchar(' ');
-						else if(!memcmp(visually_similar_offset, "&#39;", 5)){
-							visually_similar_offset+=4;
-							putchar('\'');
-						}
-						else
-							putchar(visually_similar_offset[0]);
-						visually_similar_offset++;
-					}
-					putchar('\n');
-					notcomplete=0;
-				}
-				else {
-					if(option==1){
-						fprintf(stderr, "Unknown, defaulting to link representation\n");
-						scanlinks=1;
-					}
-					notcomplete=0;
-				}
-			}
-			previous_buffer_offset = buf;
-		}
-#else
+	if(option<2){
 		char* tempptr=NULL;
 		int notcomplete=1;
 		previous_buffer_offset = complete_html;	
 		for(buf = strtok_r(complete_html, DELIM, &tempptr); buf!=NULL && notcomplete; buf = strtok_r(NULL, DELIM, &tempptr)){
-			if(!memcmp(buf, "Best guess for this image:", sizeof("Best guess for this image:")-1)){
-				best_guess_offset=0;
-			} else if(best_guess_offset==0){
-				best_guess_offset++;
-			} else if(best_guess_offset==1){
-				printf("%s: %s\n", filename, buf);
-				notcomplete=0;
-			} else if(!memcmp(buf, "Visually similar", sizeof("Visually similar")-1)){
-				visually_similar_offset = complete_html_copy + (buf - complete_html_copy);
-				while(memcmp(visually_similar_offset, "q=", 2) && visually_similar_offset>previous_buffer_offset)
+			if(!memcmp(buf, VISUALLY_SIMILAR, sizeof(VISUALLY_SIMILAR)-1)){
+				visually_similar_offset = complete_html_copy + (buf - complete_html);
+				while(memcmp(visually_similar_offset, "q=", 2) && visually_similar_offset-complete_html_copy>previous_buffer_offset-complete_html)
 					visually_similar_offset--;
-				if(previous_buffer_offset!=visually_similar_offset){
-					unsigned char completed_string[2000]={0};
+				if(previous_buffer_offset-complete_html!=visually_similar_offset-complete_html_copy){
+					unsigned int completed_string_max_size = recieved_size-(visually_similar_offset-complete_html_copy+2);
+					unsigned char *completed_string = malloc(completed_string_max_size+1);
 					unsigned char *copy_completed_string=completed_string;
+					memset(completed_string, 0, completed_string_max_size+1);
 					visually_similar_offset+=2;
 					while(	memcmp(visually_similar_offset, "&amp", 4) && 
-						copy_completed_string - completed_string < 2000 && 
-						visually_similar_offset < buf+strlen(buf)){
+						copy_completed_string - completed_string < completed_string_max_size && 
+						visually_similar_offset-complete_html_copy < previous_buffer_offset-complete_html+recieved_size){
 						if(visually_similar_offset[0]=='+'){
 							sprintf(copy_completed_string, "%c", ' ');
 							copy_completed_string++;
@@ -219,24 +176,25 @@ void entry_point(char* filename, unsigned int option, unsigned char* servername,
 						}
 						visually_similar_offset++;
 					}
-					printf("%s: %s\n", filename, completed_string);
-					if(servername!=NULL && port!=NULL)
-						send_results_to_server(servername, port, completed_string);
+					printf("[MATCHED] %s: %s\n", filename, completed_string);
+					if(servername!=NULL && port!=NULL){
+    					send_results_to_server(servername, port, completed_string);
+    				}
 					notcomplete=0;
+					free(completed_string);
 				}
 				else {
-					if(option==1){
-						fprintf(stderr, "Unknown, defaulting to link representation\n");
-						scanlinks=1;
-					}
+					printf("[MISSED] %s\n", filename);
 					notcomplete=0;
+					if(option)
+						scanlinks=1;
 				}
 			}
 			previous_buffer_offset = buf;
 		}
-#endif
 	}
-	if(option==2 || scanlinks){ 
+	
+	if(option>=2 || scanlinks){ 
 		buf = complete_html;
 		while(buf<complete_html+recieved_size){
 			if(!memcmp(buf, "href=\"", 6)){
@@ -262,7 +220,6 @@ void entry_point(char* filename, unsigned int option, unsigned char* servername,
 			buf++;
 		}
 	}
-		
 
 	while (head.tqh_first != NULL){
 		np = head.tqh_first;
@@ -271,13 +228,16 @@ void entry_point(char* filename, unsigned int option, unsigned char* servername,
 		free(np);
 	}
 	
-	
-	free(complete_html_copy);
 	free(complete_html);
+	free(complete_html_copy);
+
 }
 
 void print_usage(char** argv){
-	printf("Usage: %s <path_to_image> <\n", argv[0]);
+	printf("Usage: %s <0/1/2> <path_to_image> \n", argv[0]);
+	printf("\t\t0: only print matches\n");
+	printf("\t\t1: print matches OR print links\n");
+	printf("\t\t2: print matches AND print links\n");
 }
 
 
@@ -289,9 +249,10 @@ int main(int argc, char** argv)
     }
 
 	if(argc<5)
-		entry_point(argv[1], atoi(argv[2]), NULL, NULL); 
+		entry_point(argv[2], atoi(argv[1]), NULL, NULL); 
 	else
-		entry_point(argv[1], atoi(argv[2]), argv[3], argv[4]); 
+		entry_point(argv[2], atoi(argv[1]), argv[3], argv[4]); 
+		
     
     return 0;
     

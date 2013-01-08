@@ -36,11 +36,13 @@ This tool provides a constant running view of all images downloaded to your comp
 *********** POSTIMAGE ACCESSOR **********
 This tool is a direct usage of post image, it will upload desired image to Google and report the desired level of verbosity for the image.   
 
-./postimage <imagepath> <desired info> [<echo server ip> <echo server port>]
+./postimage <desired info> <imagepath> [<echo server ip> <echo server port>]
 Desired Info - Description
 0            - only report positive results
 1            - report positive results OR simliar links
 2            - report positive results AND similar links
+
+**note this can be used with Driftnet -> driftnet -a | xargs --min-lines=1 ./postimage 0 
 
 
 
