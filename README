@@ -1,6 +1,6 @@
 CatImageInfo
 ************
-This project contains test tools that gather information on image content (not strings or meta information) and use that information in a dynamic or appied fashion.
+This project contains test tools that gather information on image content (not strings or meta information) and use that information in a dynamic and applied fashion.
 The initial release of the program uses Google Search by Image capability in order to gauge the image content.
 Some example tools developed are a direct Google Search by Image accessor program from the command line (postimage), a dynamic image dereferencing or "viewer" program and namesake (catimageinfo), and finally a program to dynamically rename all image in a directory based on their content (rename_directory.sh).
 
